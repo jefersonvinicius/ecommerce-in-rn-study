@@ -1,24 +1,28 @@
 import {useNavigation} from '@react-navigation/native';
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useMemo, useRef, useState} from 'react';
 import {
+  ActivityIndicator,
   Animated,
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
   StyleSheet,
+  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import Indicator from '../../components/Indicator';
-import ProductItem from '../../components/ProductItem';
-import {useIsAuthenticated} from '../../modules/auth';
-import {useAddToCartAction} from '../../modules/cart';
-import {StackParamList} from '../../routes';
-import API, {Product} from '../../services';
-import LogInModal from './LogInModal';
+import Indicator from 'app/components/Indicator';
+import ProductItem from 'app/components/ProductItem';
+import {useIsAuthenticated} from 'app/modules/auth';
+import {useAddToCartAction, useCartQuery} from 'app/modules/cart';
+import {StackParamList} from 'app/routes';
+import {Product} from 'app/services';
+import LogInModal from 'app/components/LogInModal';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useProductsQuery} from 'app/modules/products';
+import {COLORS} from 'app/config/theme';
 
 type ScreenNavigationParams = NativeStackNavigationProp<StackParamList, 'Store'>;
 
@@ -31,16 +35,16 @@ export default function StoreScreen() {
   const scrollDirection = useRef<'left' | 'right' | null>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const [isScrolling, setIsScrolling] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
   const [activedProductIndex, setActivedProductIndex] = useState(0);
   const [productAddingToCart, setProductAddingToCart] = useState<Product | null>(null);
   const {isAuthenticated} = useIsAuthenticated();
 
-  const addToCart = useAddToCartAction();
+  const {addToCart, isAddingProductToCart} = useAddToCartAction();
 
-  useEffect(() => {
-    API.fetchProducts().then(setProducts);
-  }, []);
+  const {cart, isRefetchingCart} = useCartQuery();
+  const {products, isLoadingProducts, refetchProducts, isRefetchingProducts} = useProductsQuery();
+
+  console.log({isRefetchingCart});
 
   async function handleAddCartPress(product: Product) {
     if (!isAuthenticated) {
@@ -57,7 +61,7 @@ export default function StoreScreen() {
   }
 
   const points = useMemo(() => {
-    return products.map((_, index) => ({width: Math.floor(windowWidth * index), index}));
+    return products?.map((_, index) => ({width: Math.floor(windowWidth * index), index})) || [];
   }, [products, windowWidth]);
 
   const reversedPoints = useMemo(() => Array.from(points).reverse(), [points]);
@@ -102,6 +106,17 @@ export default function StoreScreen() {
           horizontal
           onScrollBeginDrag={handleScrollBeginDrag}
           onMomentumScrollEnd={handleMomentumScrollEnd}
+          onRefresh={refetchProducts}
+          refreshing={isRefetchingProducts}
+          ListEmptyComponent={
+            <>
+              {!isLoadingProducts && (
+                <View style={styles.noProductsBox}>
+                  <Text style={styles.noProductsText}>Nenhum produto encontrado!</Text>
+                </View>
+              )}
+            </>
+          }
           onScroll={Animated.event(
             [
               {
@@ -120,7 +135,7 @@ export default function StoreScreen() {
         />
         <View style={styles.header}>
           <View style={styles.indicatorsBox}>
-            {products.map((product, index) => (
+            {products?.map((product, index) => (
               <Indicator
                 key={product.id}
                 index={index}
@@ -140,6 +155,15 @@ export default function StoreScreen() {
               android_ripple={{color: 'rgba(0, 0, 0, 0.2)', borderless: true}}>
               <Icon name="shopping-cart" size={16} />
             </Pressable>
+            {cart && (
+              <View style={styles.cartCountBox}>
+                {isAddingProductToCart || isRefetchingCart ? (
+                  <ActivityIndicator size={5} color="#fff" />
+                ) : (
+                  <Text style={styles.cartCountText}>{cart.items.length}</Text>
+                )}
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -187,5 +211,30 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  noProductsBox: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  noProductsText: {
+    textAlign: 'center',
+  },
+  cartCountBox: {
+    width: 15,
+    height: 15,
+    borderRadius: 10,
+    backgroundColor: COLORS.PRIMARY,
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartCountText: {
+    color: '#fff',
+    fontSize: 10,
   },
 });

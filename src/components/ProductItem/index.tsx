@@ -1,7 +1,8 @@
 import React from 'react';
-import {Dimensions, ImageBackground, Pressable, StyleSheet, Text, View} from 'react-native';
-import {Product} from '../../services/api';
+import {Dimensions, ImageBackground, StyleSheet, Text, View} from 'react-native';
+import {Product} from '../../services';
 import {brl} from '../../utils/currency';
+import Button from '../Button';
 
 type ProductItemProps = {
   item: Product;
@@ -18,14 +19,7 @@ export default function ProductItem({item, onAddCartPress}: ProductItemProps) {
         </View>
         <View style={styles.descriptionBox}>
           <Text>{item.description}</Text>
-          <View style={styles.addCartBtn}>
-            <Pressable
-              android_ripple={{color: 'rgba(255,255,255,0.2)'}}
-              style={styles.addCartBtnInner}
-              onPress={() => onAddCartPress(item)}>
-              <Text style={styles.addCartLabel}>Add Cart</Text>
-            </Pressable>
-          </View>
+          <Button label="Add Cart" onPress={() => onAddCartPress(item)} />
         </View>
       </View>
     </ImageBackground>
@@ -59,16 +53,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  addCartBtn: {
-    backgroundColor: '#1e88e5',
-    borderRadius: 5,
-  },
-  addCartBtnInner: {
-    padding: 5,
-    paddingHorizontal: 10,
-  },
-  addCartLabel: {
-    color: '#fff',
   },
 });
